@@ -1,94 +1,73 @@
 # OpenCode Mobile (Español)
 
-Controla **OpenCode** que se ejecuta en tu PC desde tu teléfono. Una PWA segura con app Android (APK), emparejamiento por código, chat en tiempo real y gestión de permisos.
+Controla **OpenCode** que se ejecuta en tu PC desde tu teléfono, en tu **red local**, sin configurar servidores ni escribir comandos complicados.
 
-## Arquitectura
+## Cómo funciona
+
+1. Instalas la **app** en el móvil.
+2. Instalas el **agente** en el PC (un programa que muestra un QR).
+3. Escaneas el QR con la app. Listo.
 
 ```
-┌─────────────┐     ┌──────────────┐     ┌─────────────┐
-│  Teléfono   │────►│   Backend    │◄───►│     PC      │
-│ (PWA/APK)   │ WS  │  (Hono)      │     │  (Agente)   │
-└─────────────┘     └──────────────┘     └──────┬──────┘
-                                                 │
-                                         ┌───────┴───────┐
-                                         │   OpenCode    │
-                                         │  (REST+SSE)   │
-                                         └───────────────┘
+┌─────────────┐         WiFi          ┌──────────────────────┐
+│  Teléfono   │◄─────────────────────►│  PC (Agente)         │
+│  (App/APK)  │   HTTP + WebSocket    │  └─ OpenCode (serve) │
+└─────────────┘                       └──────────────────────┘
 ```
 
-- **Frontend**: React 18 + Vite + Tailwind + PWA (Workbox) + Capacitor (Android)
-- **Backend**: Hono + Drizzle ORM + PostgreSQL + WebSocket (ws)
-- **Agente**: Node.js + adaptador OpenCode (REST/SSE) + cliente WebSocket
-- **Compartido**: tipos TypeScript, esquemas Zod, utilidades crypto
+No hay backend en la nube: el agente del PC **es** el servidor. Todo queda en tu red.
 
-## Instalación de la APK
+## Instalación rápida
 
-Consulta **[docs/INSTALACION-APK.md](docs/INSTALACION-APK.md)** para la guía paso a paso, o descarga la APK desde la sección **Releases**.
+- **App Android:** descarga `app-debug.apk` desde [Releases](../../releases).
+- **Agente en el PC (Linux/macOS):**
 
-## Inicio rápido (desarrollo)
+  ```bash
+  curl -fsSL https://raw.githubusercontent.com/Adriyache32/opencode-mobile/main/scripts/install-agent.sh | bash
+  ```
 
-### Requisitos
+  Se abre el navegador con el QR. Escanéalo desde la app.
 
-- Node.js ≥ 20 LTS
-- pnpm ≥ 9
-- Docker ≥ 24 + Docker Compose ≥ 2
-- OpenCode en el PC (`opencode serve --port 8080`)
+Guía detallada: **[docs/INSTALACION-APK.md](docs/INSTALACION-APK.md)**.
+
+## Qué incluye la app
+
+- Emparejamiento por **QR** (o manual si falla la cámara).
+- Tutorial integrado en español.
+- Chat en tiempo real (en desarrollo: Fase 2).
+- Cancelación de tareas y confirmación de acciones peligrosas (en desarrollo).
+
+## Estado del proyecto
+
+| Parte | Estado |
+|-------|--------|
+| Monorepo, tipos compartidos, CI | ✅ Hecho |
+| App Android (APK) + tutorial + QR | ✅ Hecho |
+| Agente LAN con QR | ✅ Hecho |
+| Backend en la nube (opcional) | 🔜 Futuro |
+| Chat con OpenCode (adaptador) | 🚧 En curso |
+| Permisos y auditoría | 🚧 En curso |
+
+## Desarrollo
 
 ```bash
-# Clonar e instalar
-git clone https://github.com/Adriyache32/opencode-mobile
-cd opencode-mobile
 pnpm install
+pnpm build          # compila los 4 paquetes
+pnpm typecheck
+pnpm lint
 
-# Generar claves JWT (una vez)
-mkdir -p docker/secrets
-openssl genrsa -out docker/secrets/jwt_private.pem 2048
-openssl rsa -in docker/secrets/jwt_private.pem -pubout -out docker/secrets/jwt_public.pem
-echo "changeme" > docker/secrets/opencode_password.txt
-openssl rand -base64 32 > docker/secrets/db_password.txt
-
-# Infraestructura
-pnpm docker:up
-pnpm db:migrate
-
-# Servidores de desarrollo
-pnpm --filter @opencode-mobile/backend dev
-pnpm --filter @opencode-mobile/frontend dev
+# Agente en local
 pnpm --filter @opencode-mobile/agent dev
+
+# Frontend en local
+pnpm --filter @opencode-mobile/frontend dev
 ```
-
-## Compilar la APK
-
-```bash
-./scripts/build-apk.sh
-```
-
-Requiere JDK 21 estándar (no GraalVM) y Android SDK con `platforms/android-36`.
-
-La APK se genera en `packages/frontend/android/app/build/outputs/apk/debug/app-debug.apk`.
-
-## Tutorial integrado
-
-La app incluye un **tutorial guiado en español** que aparece la primera vez y explica:
-
-1. Arrancar OpenCode en el PC.
-2. Arrancar el backend.
-3. Arrancar el agente.
-4. Emparejar el teléfono con un código de 6 dígitos.
-5. Empezar a chatear.
-
-Puedes volver a abrirlo desde la pantalla principal.
 
 ## Seguridad
 
-- JWT RS256 con rotación de claves.
-- Códigos de emparejamiento efímeros (2 min, 3 intentos).
-- Tokens de dispositivo con refresh rotativo.
-- Permisos granulares y confirmación para acciones peligrosas.
-- Registro de auditoría completo.
-- Límite de peticiones en endpoints de autenticación.
-
-Ver [SECURITY.md](SECURITY.md).
+- El QR contiene un **token secreto** de emparejamiento (solo visible en tu pantalla).
+- Todo el tráfico va por tu red local.
+- Para uso fuera de casa, usa una VPN de malla (Tailscale/ZeroTier) — nunca expongas el agente a Internet.
 
 ## Licencia
 

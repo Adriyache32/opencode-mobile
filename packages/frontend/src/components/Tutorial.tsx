@@ -4,47 +4,39 @@ interface TutorialStep {
   title: string;
   description: string;
   icon: string;
-  code?: string;
+  hint?: string;
 }
 
 const STEPS: TutorialStep[] = [
   {
     title: 'Bienvenido a OpenCode Mobile',
     description:
-      'Controla OpenCode desde tu teléfono. Envía instrucciones a tu PC, mira el progreso en tiempo real y recibe los resultados, todo desde una app tipo chat.',
+      'Controla OpenCode desde tu teléfono. Envía instrucciones a tu PC y recibe los resultados, todo desde una app tipo chat.',
     icon: '👋',
   },
   {
-    title: '1. Arranca OpenCode en tu PC',
+    title: '1. Instala el agente en tu PC',
     description:
-      'En la computadora donde quieres que se ejecuten las tareas, abre una terminal y arranca el servidor de OpenCode. Anota la contraseña que muestra: la necesitarás luego.',
+      'Descarga el instalador de OpenCode Mobile para tu ordenador y ábrelo. No hace falta terminal: el instalador arranca todo solo.',
     icon: '💻',
-    code: 'opencode serve --port 8080',
+    hint: 'Windows, macOS y Linux',
   },
   {
-    title: '2. Arranca el backend',
+    title: '2. Aparecerá un código QR',
     description:
-      'El backend conecta tu teléfono con el agente de tu PC. Puedes ejecutarlo con Docker Compose (recomendado) o directamente con Node.',
-    icon: '🚀',
-    code: 'docker compose -f docker/docker-compose.yml up -d',
+      'El agente abre una página en el navegador de tu PC con un código QR. Deja esa ventana abierta mientras conectas el móvil.',
+    icon: '🔳',
   },
   {
-    title: '3. Arranca el agente en tu PC',
+    title: '3. Escanea el QR con esta app',
     description:
-      'El agente se conecta al backend y ejecuta las órdenes contra OpenCode. Ejecútalo en la misma máquina que OpenCode.',
-    icon: '🤖',
-    code: 'pnpm --filter @opencode-mobile/agent dev --pair',
+      'Pulsa "Escanear QR" y apunta al código de la pantalla del PC. Si la cámara falla, puedes introducir la dirección y el código a mano.',
+    icon: '📷',
   },
   {
-    title: '4. Empareja este teléfono',
+    title: '4. ¡Listo para chatear!',
     description:
-      'Al arrancar el agente verás un código de 6 dígitos en la terminal. Introdúcelo en la app para vincular este teléfono con tu PC. El código caduca en 2 minutos y solo sirve una vez.',
-    icon: '🔗',
-  },
-  {
-    title: '5. ¡A chatear!',
-    description:
-      'Ya puedes escribir instrucciones como "abre Firefox y reproduce mi serie favorita". Verás el estado de la tarea, podrás cancelarla y revisar el historial. Las acciones peligrosas pedirán confirmación.',
+      'Escribe instrucciones como "abre Firefox y reproduce mi serie favorita". Verás el progreso, podrás cancelar tareas y las acciones peligrosas pedirán confirmación.',
     icon: '💬',
   },
 ];
@@ -74,12 +66,11 @@ export function Tutorial({ onDone }: { onDone: () => void }) {
           {current.icon}
         </div>
         <h1 className="text-2xl font-bold mb-3">{current.title}</h1>
-        <p className="text-dark-muted leading-relaxed mb-6">{current.description}</p>
-
-        {current.code && (
-          <pre className="w-full text-left bg-black/40 border border-dark-border rounded-lg p-4 overflow-x-auto scrollbar-thin">
-            <code className="font-mono text-sm text-primary-300 whitespace-pre">{current.code}</code>
-          </pre>
+        <p className="text-dark-muted leading-relaxed mb-3">{current.description}</p>
+        {current.hint && (
+          <span className="text-xs px-3 py-1 rounded-full bg-primary-500/15 text-primary-300">
+            {current.hint}
+          </span>
         )}
       </div>
 
@@ -105,7 +96,7 @@ export function Tutorial({ onDone }: { onDone: () => void }) {
             onClick={() => (isLast ? finish() : setStep((s) => s + 1))}
             className="btn-primary flex-1"
           >
-            {isLast ? 'Empezar' : 'Siguiente'}
+            {isLast ? 'Conectar mi PC' : 'Siguiente'}
           </button>
         </div>
       </div>
