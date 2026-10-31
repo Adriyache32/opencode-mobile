@@ -2,6 +2,10 @@
 
 Control OpenCode running on your PC from your phone. A secure, real-time mobile PWA with device pairing, chat interface, and permission management.
 
+> 🇪🇸 **En español:** lee [README.es.md](README.es.md) y la [guía de instalación de la APK](docs/INSTALACION-APK.md).
+>
+> 📱 **APK Android:** descárgala desde [Releases](../../releases) o compílala con `./scripts/build-apk.sh`.
+
 ## Architecture
 
 ```
