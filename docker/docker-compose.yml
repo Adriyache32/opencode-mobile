@@ -1,0 +1,91 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: opencode_mobile
+      POSTGRES_USER: opencode
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    secrets:
+      - db_password
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U opencode"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    ports:
+      - "5432:5432"
+
+  backend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.backend
+    environment:
+      DATABASE_URL: postgresql://opencode:$${DB_PASSWORD}@db:5432/opencode_mobile
+      JWT_PRIVATE_KEY_PATH: /run/secrets/jwt_private.pem
+      JWT_PUBLIC_KEY_PATH: /run/secrets/jwt_public.pem
+      OPENCODE_URL: http://host.docker.internal:8080
+      OPENCODE_PASSWORD_FILE: /run/secrets/opencode_password
+      CORS_ORIGIN: http://localhost:5173
+      NODE_ENV: development
+      PORT: 3000
+      WS_PORT: 3001
+    ports:
+      - "3000:3000"
+      - "3001:3001"
+    depends_on:
+      db:
+        condition: service_healthy
+    secrets:
+      - db_password
+      - jwt_private.pem
+      - jwt_public.pem
+      - opencode_password
+    volumes:
+      - ../packages/backend:/app/packages/backend
+      - ../packages/shared:/app/packages/shared
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    volumes:
+      - ../packages/frontend:/app/packages/frontend
+      - ../packages/shared:/app/packages/shared
+
+  agent:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.agent
+    environment:
+      BACKEND_URL: http://backend:3000
+      BACKEND_WS_URL: ws://backend:3001
+      DEVICE_TOKEN_PATH: /data/device.token
+    volumes:
+      - agent_data:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    network_mode: host
+    depends_on:
+      - backend
+
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt
+  jwt_private.pem:
+    file: ./secrets/jwt_private.pem
+  jwt_public.pem:
+    file: ./secrets/jwt_public.pem
+  opencode_password:
+    file: ./secrets/opencode_password.txt
+
+volumes:
+  postgres_data:
+  agent_data:

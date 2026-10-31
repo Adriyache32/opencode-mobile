@@ -1,0 +1,79 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-primary: #4361ee;
+  --color-bg: #0f0f1a;
+  --color-surface: #1a1a2e;
+  --color-border: #2a2a4a;
+  --color-text: #e8e8f0;
+  --color-muted: #8a8ab8;
+}
+
+@layer base {
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  
+  body {
+    @apply bg-dark-bg text-dark-text antialiased;
+    margin: 0;
+    min-height: 100vh;
+  }
+  
+  * {
+    @apply border-dark-border;
+  }
+  
+  ::selection {
+    @apply bg-primary-500/30 text-primary-50;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center px-4 py-2 rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-dark-bg disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  
+  .btn-primary {
+    @apply btn bg-primary-600 text-white hover:bg-primary-700 active:bg-primary-800;
+  }
+  
+  .btn-secondary {
+    @apply btn bg-dark-surface text-dark-text border border-dark-border hover:bg-dark-border active:bg-dark-border/80;
+  }
+  
+  .btn-ghost {
+    @apply btn bg-transparent hover:bg-dark-border active:bg-dark-border/80;
+  }
+  
+  .input {
+    @apply w-full px-4 py-2.5 rounded-lg bg-dark-surface border border-dark-border text-dark-text placeholder-dark-muted focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all;
+  }
+  
+  .card {
+    @apply bg-dark-surface rounded-xl border border-dark-border p-6;
+  }
+}
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border) transparent;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: var(--color-border);
+    border-radius: 3px;
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2022"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "baseUrl": ".",
+    "paths": {
+      "@opencode-mobile/shared/*": ["packages/shared/src/*"],
+      "@opencode-mobile/backend/*": ["packages/backend/src/*"],
+      "@opencode-mobile/frontend/*": ["packages/frontend/src/*"],
+      "@opencode-mobile/agent/*": ["packages/agent/src/*"]
+    }
+  }
+}

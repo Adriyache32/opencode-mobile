@@ -1,0 +1,31 @@
+{
+  "name": "@opencode-mobile/agent",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts",
+    "lint": "eslint src --ext .ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "pkg": "pkg dist/index.js --targets node20-linux,node20-macos,node20-win --output opencode-mobile-agent"
+  },
+  "dependencies": {
+    "ws": "^8.18.0",
+    "zod": "^3.23.0",
+    "bcrypt": "^5.1.1",
+    "@opencode-mobile/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "vitest": "^2.0.0",
+    "tsx": "^4.16.0",
+    "@types/ws": "^8.5.12",
+    "@types/bcrypt": "^5.0.2",
+    "@types/node": "^22.0.0",
+    "pkg": "^5.8.0"
+  }
+}
