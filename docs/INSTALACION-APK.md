@@ -69,7 +69,9 @@ Escribe instrucciones como *"abre Firefox y reproduce mi serie favorita"*. Verá
 
 | Problema | Solución |
 |----------|----------|
-| "No se pudo conectar" | Comprueba que el PC y el móvil están en la misma WiFi y que el agente sigue abierto. |
+| "No se pudo conectar a http://…" | El móvil no llega al PC. Misma WiFi (no datos móviles), agente abierto y router sin **aislamiento de clientes** (AP isolation). |
+| "Código de emparejamiento incorrecto" | El QR es de otra sesión. Vuelve a escanear el QR de la página del PC. |
+| "El PC no respondió en 8s" | Firewall del PC bloqueando el puerto 8787, o IP del PC cambiada. Vuelve a escanear el QR. |
 | La cámara no abre | Da permiso de cámara a la app en Ajustes de Android, o usa la introducción manual. |
 | El firewall bloquea | Permite al agente en el puerto 8787 (TCP) en el firewall del PC. |
 | Cambio de red | Si cambia la IP del PC, vuelve a escanear el QR (el agente muestra la nueva dirección). |

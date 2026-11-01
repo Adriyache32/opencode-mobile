@@ -12,6 +12,13 @@ const config: CapacitorConfig = {
     // En producción el backend debe servirse por HTTPS.
     cleartext: true,
   },
+  plugins: {
+    // Las peticiones HTTP salen por el cliente nativo: evita el bloqueo
+    // de contenido mixto (https://localhost -> http://192.168.x.x) y CORS.
+    CapacitorHttp: {
+      enabled: true,
+    },
+  },
 };
 
 export default config;

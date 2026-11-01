@@ -22,6 +22,7 @@ export function Connect({ onConnected, onBack }: ConnectProps) {
   const [busy, setBusy] = useState(false);
   const [manualUrl, setManualUrl] = useState('');
   const [manualToken, setManualToken] = useState('');
+  const [lastScan, setLastScan] = useState<{ url: string; token: string } | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -37,6 +38,7 @@ export function Connect({ onConnected, onBack }: ConnectProps) {
   async function finishWith(url: string, token: string) {
     setBusy(true);
     setError(null);
+    setLastScan({ url, token });
     const res = await testConnection(url, token);
     if (!res.ok) {
       setBusy(false);
@@ -191,9 +193,39 @@ export function Connect({ onConnected, onBack }: ConnectProps) {
         )}
 
         {error && (
-          <p className="mt-4 text-sm text-red-400 text-center" role="alert">
-            {error}
-          </p>
+          <div className="mt-4 w-full">
+            <p className="text-sm text-red-400 text-center break-words" role="alert">
+              {error}
+            </p>
+            {mode === 'scan' && lastScan && (
+              <button
+                type="button"
+                onClick={() => {
+                  setManualUrl(lastScan.url);
+                  setManualToken(lastScan.token);
+                  setError(null);
+                  stopCamera();
+                  setMode('manual');
+                }}
+                className="btn-secondary w-full mt-3"
+              >
+                Editar dirección y código
+              </button>
+            )}
+            {mode === 'scan' && (
+              <button
+                type="button"
+                onClick={() => {
+                  setError(null);
+                  if (lastScan) void finishWith(lastScan.url, lastScan.token);
+                  else setMode('choose');
+                }}
+                className="btn-ghost w-full mt-2"
+              >
+                Reintentar
+              </button>
+            )}
+          </div>
         )}
       </main>
     </div>

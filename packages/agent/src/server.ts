@@ -17,6 +17,17 @@ export function createAgentServer(opts: ServerOptions): Server {
 
   app.use('*', cors({ origin: '*', credentials: false }));
 
+  // Registro de peticiones: sirve para diagnosticar conexiones desde el móvil.
+  app.use('*', async (c, next) => {
+    const t0 = Date.now();
+    await next();
+    const origin = c.req.header('origin') ?? '-';
+    console.log(
+      `[${new Date().toISOString()}] ${c.req.method} ${c.req.path} -> ${c.res.status} ` +
+        `(${Date.now() - t0}ms) origin=${origin} ua=${(c.req.header('user-agent') ?? '-').slice(0, 40)}`
+    );
+  });
+
   app.get('/health', (c) => c.json({ ok: true, name: opts.deviceName, service: 'opencode-mobile-agent' }));
 
   app.get('/api/info', (c) =>
@@ -79,7 +90,7 @@ export function createAgentServer(opts: ServerOptions): Server {
   // WebSocket: canal de tiempo real con el móvil (chat con OpenCode).
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
   wss.on('connection', (ws: WebSocket) => {
-    ws.send(JSON.stringify({ type: 'hello', name: opts.deviceName, protocol: 1 }));
+    console.log(`[${new Date().toISOString()}] WS conectado`);    ws.send(JSON.stringify({ type: 'hello', name: opts.deviceName, protocol: 1 }));
     ws.on('message', (data) => {
       // Placeholder hasta conectar el adaptador de OpenCode (Tarea 4).
       try {
