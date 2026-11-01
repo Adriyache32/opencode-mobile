@@ -5,6 +5,14 @@ export interface ChatMessage {
   text: string;
 }
 
+export interface PermissionRequest {
+  id: string;
+  sessionID: string;
+  action: string;
+  resources?: string[];
+  save?: string[];
+}
+
 export type AgentEvent =
   | { type: 'hello'; name: string; protocol: number; opencode: 'ready' | 'offline'; error?: string }
   | { type: 'status'; state: 'idle' | 'busy' | 'offline'; detail?: string }
@@ -13,6 +21,8 @@ export type AgentEvent =
   | { type: 'assistant_start'; id: string }
   | { type: 'delta'; id: string; text: string }
   | { type: 'done'; id: string }
+  | { type: 'permission'; request: PermissionRequest }
+  | { type: 'permission_closed'; id: string }
   | { type: 'error'; message: string }
   | { type: 'pong' };
 
@@ -72,7 +82,7 @@ export class ChatSocket {
     }, delay);
   }
 
-  send(msg: { type: string; text?: string }): boolean {
+  send(msg: { type: string; text?: string; id?: string; decision?: string }): boolean {
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify(msg));
       return true;

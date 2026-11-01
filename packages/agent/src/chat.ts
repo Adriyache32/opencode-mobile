@@ -1,6 +1,13 @@
 // Puente entre la app (WebSocket) y OpenCode (HTTP + SSE).
 import { WebSocket } from 'ws';
-import { connectOpenCode, type ChatMessage, type OpenCodeClient, type OpenCodeEvent } from './opencode';
+import {
+  connectOpenCode,
+  type ChatMessage,
+  type OpenCodeClient,
+  type OpenCodeEvent,
+  type PermissionRequest,
+} from './opencode';
+import { saveState } from './store';
 
 export type ServerMessage =
   | { type: 'hello'; name: string; protocol: number; opencode: 'ready' | 'offline'; error?: string }
@@ -10,25 +17,39 @@ export type ServerMessage =
   | { type: 'assistant_start'; id: string }
   | { type: 'delta'; id: string; text: string }
   | { type: 'done'; id: string }
+  | { type: 'permission'; request: PermissionRequest }
+  | { type: 'permission_closed'; id: string }
   | { type: 'error'; message: string }
   | { type: 'pong' };
 
 interface ClientMessage {
-  type: 'prompt' | 'cancel' | 'ping' | 'history';
+  type: 'prompt' | 'cancel' | 'ping' | 'history' | 'new_session' | 'permission_reply';
   text?: string;
+  id?: string;
+  decision?: 'once' | 'always' | 'reject';
 }
 
 export class ChatHub {
   private clients = new Set<WebSocket>();
-  private oc: OpenCodeClient | null = null;
-  private sessionID: string | null = null;
+  private oc: OpenCodeClient | null;
+  private sessionID: string | null;
   private busy = false;
   private buffers = new Map<string, string>();
   private opencodeError: string | null = null;
+  private started: boolean;
 
-  constructor(private deviceName: string) {}
+  constructor(
+    private deviceName: string,
+    opts: { client?: OpenCodeClient | null; sessionID?: string | null } = {}
+  ) {
+    this.oc = opts.client ?? null;
+    this.sessionID = opts.sessionID ?? null;
+    this.started = opts.client !== undefined;
+  }
 
   async start(): Promise<void> {
+    if (this.started) return;
+    this.started = true;
     const conn = await connectOpenCode();
     this.oc = conn.client;
     this.opencodeError = conn.error;
@@ -38,7 +59,7 @@ export class ChatHub {
     }
     console.log('OpenCode conectado');
     this.oc.subscribe(
-      (e) => this.onEvent(e),
+      (e) => this.handleEvent(e),
       (ok) => {
         if (!ok) this.broadcast({ type: 'status', state: 'offline', detail: 'Sin conexión con OpenCode' });
       }
@@ -51,7 +72,7 @@ export class ChatHub {
       JSON.stringify({
         type: 'hello',
         name: this.deviceName,
-        protocol: 2,
+        protocol: 3,
         opencode: this.oc ? 'ready' : 'offline',
         error: this.opencodeError ?? undefined,
       } satisfies ServerMessage)
@@ -59,6 +80,7 @@ export class ChatHub {
     if (this.oc) {
       ws.send(JSON.stringify({ type: 'status', state: this.busy ? 'busy' : 'idle' } satisfies ServerMessage));
       void this.sendHistory(ws);
+      void this.sendPendingPermissions(ws);
     } else {
       ws.send(
         JSON.stringify({
@@ -100,6 +122,35 @@ export class ChatHub {
       return;
     }
 
+    if (msg.type === 'permission_reply') {
+      if (!msg.id || !msg.decision) return;
+      const sid = this.sessionID;
+      if (!sid) return;
+      try {
+        await this.oc.replyPermission(sid, msg.id, msg.decision);
+        this.broadcast({ type: 'permission_closed', id: msg.id });
+      } catch (e) {
+        this.broadcast({ type: 'error', message: errorText(e) });
+      }
+      return;
+    }
+
+    if (msg.type === 'new_session') {
+      if (this.busy) {
+        ws.send(JSON.stringify({ type: 'error', message: 'Espera a que termine la tarea' } satisfies ServerMessage));
+        return;
+      }
+      try {
+        this.sessionID = await this.oc.createSession(`${this.deviceName} · móvil`);
+        saveState({ sessionID: this.sessionID });
+        this.broadcast({ type: 'history', messages: [] });
+        this.broadcast({ type: 'status', state: 'idle' });
+      } catch (e) {
+        this.broadcast({ type: 'error', message: errorText(e) });
+      }
+      return;
+    }
+
     if (msg.type === 'prompt') {
       const text = (msg.text ?? '').trim();
       if (!text) return;
@@ -136,6 +187,7 @@ export class ChatHub {
   private async ensureSession(): Promise<string> {
     if (this.sessionID) return this.sessionID;
     this.sessionID = await this.oc!.createSession(`${this.deviceName} · móvil`);
+    saveState({ sessionID: this.sessionID });
     return this.sessionID;
   }
 
@@ -152,12 +204,23 @@ export class ChatHub {
     }
   }
 
-  private onEvent(e: OpenCodeEvent): void {
+  private async sendPendingPermissions(ws: WebSocket): Promise<void> {
+    if (!this.oc || !this.sessionID) return;
+    try {
+      const pending = await this.oc.pendingPermissions(this.sessionID);
+      for (const request of pending) {
+        ws.send(JSON.stringify({ type: 'permission', request } satisfies ServerMessage));
+      }
+    } catch {
+      // sin permisos pendientes
+    }
+  }
+
+  handleEvent(e: OpenCodeEvent): void {
     const data = (e.data ?? {}) as {
       sessionID?: string;
       assistantMessageID?: string;
       delta?: string;
-      outcome?: string;
     };
     if (data.sessionID && this.sessionID && data.sessionID !== this.sessionID) return;
 
@@ -173,6 +236,14 @@ export class ChatHub {
         const prev = this.buffers.get(id) ?? '';
         this.buffers.set(id, prev + (data.delta ?? ''));
         this.broadcast({ type: 'delta', id, text: data.delta ?? '' });
+        break;
+      }
+      case 'permission.asked':
+        this.broadcast({ type: 'permission', request: e.data as unknown as PermissionRequest });
+        break;
+      case 'permission.replied': {
+        const id = (e.data as { id?: string })?.id;
+        if (id) this.broadcast({ type: 'permission_closed', id });
         break;
       }
       case 'session.execution.started':

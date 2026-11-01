@@ -33,7 +33,7 @@ async function main() {
   const url = `http://${host}:${PORT}`;
   const payload = buildPayload(url, state.token, state.deviceName);
 
-  createAgentServer({ payload, deviceName: state.deviceName, port: PORT });
+  createAgentServer({ payload, deviceName: state.deviceName, port: PORT, sessionID: state.sessionID });
 
   const qr = await renderTerminalQR(payload);
 

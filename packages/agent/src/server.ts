@@ -11,11 +11,12 @@ export interface ServerOptions {
   payload: PairPayload;
   deviceName: string;
   port: number;
+  sessionID?: string;
 }
 
 export function createAgentServer(opts: ServerOptions): Server {
   const app = new Hono();
-  const hub = new ChatHub(opts.deviceName);
+  const hub = new ChatHub(opts.deviceName, { sessionID: opts.sessionID });
   void hub.start();
 
   app.use('*', cors({ origin: '*', credentials: false }));

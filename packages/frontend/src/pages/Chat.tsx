@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ChatSocket, type AgentEvent, type ChatMessage, type ConnectionState } from '../services/chat';
+import { ChatSocket, type AgentEvent, type ChatMessage, type ConnectionState, type PermissionRequest } from '../services/chat';
 import type { Connection } from '../services/connection';
 
 interface ChatProps {
@@ -19,6 +19,7 @@ export function Chat({ connection, onDisconnect }: ChatProps) {
   const [error, setError] = useState<string | null>(null);
   const [opencode, setOpencode] = useState<'ready' | 'offline'>('offline');
   const [detail, setDetail] = useState<string | null>(null);
+  const [permission, setPermission] = useState<PermissionRequest | null>(null);
 
   const socketRef = useRef<ChatSocket | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -77,6 +78,12 @@ export function Chat({ connection, onDisconnect }: ChatProps) {
       case 'error':
         setError(event.message);
         break;
+      case 'permission':
+        setPermission(event.request);
+        break;
+      case 'permission_closed':
+        setPermission((p) => (p && p.id === event.id ? null : p));
+        break;
       default:
         break;
     }
@@ -95,6 +102,19 @@ export function Chat({ connection, onDisconnect }: ChatProps) {
 
   function cancel() {
     socketRef.current?.send({ type: 'cancel' });
+  }
+
+  function replyPermission(decision: 'once' | 'always' | 'reject') {
+    if (!permission) return;
+    socketRef.current?.send({ type: 'permission_reply', id: permission.id, decision });
+    setPermission(null);
+  }
+
+  function newSession() {
+    socketRef.current?.send({ type: 'new_session' });
+    setMessages([]);
+    setPermission(null);
+    setError(null);
   }
 
   const stateLabel = useMemo(() => {
@@ -123,10 +143,14 @@ export function Chat({ connection, onDisconnect }: ChatProps) {
             {stateLabel}
           </p>
         </div>
-        <button onClick={onDisconnect} className="text-sm text-dark-muted hover:text-red-400 shrink-0">
-          Desconectar
-        </button>
-      </header>
+        <div className="flex items-center gap-3 shrink-0">
+          <button onClick={newSession} className="text-sm text-dark-muted hover:text-dark-text">
+            Nueva
+          </button>
+          <button onClick={onDisconnect} className="text-sm text-dark-muted hover:text-red-400">
+            Desconectar
+          </button>
+        </div>      </header>
 
       <main className="flex-1 overflow-y-auto px-4 py-4">
         {messages.length === 0 && (
@@ -174,6 +198,33 @@ export function Chat({ connection, onDisconnect }: ChatProps) {
           >
             {error ?? detail}
           </p>
+        </div>
+      )}
+
+      {permission && (
+        <div className="px-4 pb-2">
+          <div className="max-w-2xl mx-auto rounded-xl border border-amber-500/40 bg-amber-500/10 p-3">
+            <p className="text-sm font-semibold text-amber-300 mb-1">OpenCode pide permiso</p>
+            <p className="text-xs text-dark-muted mb-1">
+              Acción: <span className="text-dark-text">{permission.action}</span>
+            </p>
+            {permission.resources && permission.resources.length > 0 && (
+              <pre className="text-xs bg-black/40 rounded p-2 overflow-x-auto mb-2 whitespace-pre-wrap break-all">
+                {permission.resources.join('\n')}
+              </pre>
+            )}
+            <div className="flex gap-2">
+              <button onClick={() => replyPermission('once')} className="btn-primary flex-1 py-2 text-sm">
+                Permitir
+              </button>
+              <button onClick={() => replyPermission('always')} className="btn-secondary flex-1 py-2 text-sm">
+                Siempre
+              </button>
+              <button onClick={() => replyPermission('reject')} className="btn-ghost flex-1 py-2 text-sm text-red-400">
+                Denegar
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

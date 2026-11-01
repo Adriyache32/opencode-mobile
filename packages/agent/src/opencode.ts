@@ -19,6 +19,14 @@ export interface ChatMessage {
   text: string;
 }
 
+export interface PermissionRequest {
+  id: string;
+  sessionID: string;
+  action: string;
+  resources?: string[];
+  save?: string[];
+}
+
 interface RawMessage {
   id: string;
   type: string;
@@ -87,6 +95,24 @@ export class OpenCodeClient {
 
   async interrupt(sessionID: string): Promise<void> {
     await this.request(`/api/session/${sessionID}/interrupt`, { method: 'POST', body: '{}' });
+  }
+
+  async replyPermission(
+    sessionID: string,
+    requestID: string,
+    decision: 'once' | 'always' | 'reject'
+  ): Promise<void> {
+    await this.request(`/api/session/${sessionID}/permission/${requestID}/reply`, {
+      method: 'POST',
+      body: JSON.stringify({ decision }),
+    });
+  }
+
+  async pendingPermissions(sessionID: string): Promise<PermissionRequest[]> {
+    const res = await this.request<{ data: PermissionRequest[] }>(
+      `/api/session/${sessionID}/permission`
+    );
+    return res.data;
   }
 
   async messages(sessionID: string): Promise<ChatMessage[]> {
