@@ -5,6 +5,7 @@ import { cors } from 'hono/cors';
 import { getRequestListener } from '@hono/node-server';
 import { WebSocketServer, WebSocket } from 'ws';
 import { renderDataURL, type PairPayload } from './qr';
+import { ChatHub } from './chat';
 
 export interface ServerOptions {
   payload: PairPayload;
@@ -14,6 +15,8 @@ export interface ServerOptions {
 
 export function createAgentServer(opts: ServerOptions): Server {
   const app = new Hono();
+  const hub = new ChatHub(opts.deviceName);
+  void hub.start();
 
   app.use('*', cors({ origin: '*', credentials: false }));
 
@@ -30,8 +33,16 @@ export function createAgentServer(opts: ServerOptions): Server {
 
   app.get('/health', (c) => c.json({ ok: true, name: opts.deviceName, service: 'opencode-mobile-agent' }));
 
+  // Autenticación: todo lo que no sea emparejamiento exige el token del QR.
+  app.use('/api/*', async (c, next) => {
+    const header = c.req.header('authorization') ?? '';
+    const token = header.startsWith('Bearer ') ? header.slice(7) : c.req.query('token');
+    if (token !== opts.payload.token) return c.json({ ok: false, error: 'No autorizado' }, 401);
+    await next();
+  });
+
   app.get('/api/info', (c) =>
-    c.json({ name: opts.deviceName, version: '0.1.0', protocol: 1 })
+    c.json({ name: opts.deviceName, version: '0.1.0', protocol: 2 })
   );
 
   // Verifica el token del QR (el móvil puede comprobarlo antes de guardar).
@@ -89,16 +100,16 @@ export function createAgentServer(opts: ServerOptions): Server {
 
   // WebSocket: canal de tiempo real con el móvil (chat con OpenCode).
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
-  wss.on('connection', (ws: WebSocket) => {
-    console.log(`[${new Date().toISOString()}] WS conectado`);    ws.send(JSON.stringify({ type: 'hello', name: opts.deviceName, protocol: 1 }));
+  wss.on('connection', (ws: WebSocket, req) => {
+    const url = new URL(req.url ?? '/ws', 'http://localhost');
+    if (url.searchParams.get('token') !== opts.payload.token) {
+      ws.close(4401, 'No autorizado');
+      return;
+    }
+    console.log(`[${new Date().toISOString()}] WS conectado`);
+    hub.attach(ws);
     ws.on('message', (data) => {
-      // Placeholder hasta conectar el adaptador de OpenCode (Tarea 4).
-      try {
-        const msg = JSON.parse(data.toString()) as { type?: string };
-        if (msg.type === 'ping') ws.send(JSON.stringify({ type: 'pong' }));
-      } catch {
-        ws.send(JSON.stringify({ type: 'error', message: 'Mensaje inválido' }));
-      }
+      void hub.handle(ws, data.toString());
     });
   });
 

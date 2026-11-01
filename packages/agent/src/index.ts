@@ -3,8 +3,17 @@ import { networkInterfaces } from 'os';
 import { buildPayload, renderTerminalQR } from './qr';
 import { createAgentServer } from './server';
 import { loadOrCreateState } from './store';
+import { stopOpenCode } from './opencode';
 
 const PORT = Number(process.env.AGENT_PORT) || 8787;
+
+// Al cerrar, mata el `opencode serve` que hayamos arrancado.
+for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+  process.on(signal, () => {
+    stopOpenCode();
+    process.exit(0);
+  });
+}
 
 function lanAddress(): string {
   const ifaces = networkInterfaces();

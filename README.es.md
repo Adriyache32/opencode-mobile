@@ -45,7 +45,7 @@ Guía detallada: **[docs/INSTALACION-APK.md](docs/INSTALACION-APK.md)**.
 | App Android (APK) + tutorial + QR | ✅ Hecho |
 | Agente LAN con QR | ✅ Hecho |
 | Backend en la nube (opcional) | 🔜 Futuro |
-| Chat con OpenCode (adaptador) | 🚧 En curso |
+| Chat con OpenCode (adaptador) | ✅ Hecho |
 | Permisos y auditoría | 🚧 En curso |
 
 ## Desarrollo
